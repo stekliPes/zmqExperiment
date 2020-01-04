@@ -8,6 +8,8 @@
 
 #include "zmq.hpp"
 
+#include <iostream>
+
 class ZmqServerApp : public QCoreApplication
 {
     Q_OBJECT
@@ -24,6 +26,8 @@ private:
     void setupPublisher();
     void setupResponder();
     void setupSubscriber();
+
+    int events(zmq::socket_t &);
 
     inline void toggleLights();
     inline void setResponseWord(const QString &);
@@ -57,16 +61,19 @@ void ZmqServerApp::setResponseWord(const QString &word)
 
 void ZmqServerApp::startPublish()
 {
+    std::cout << "Starting publishing" << std::endl;
     m_publishTimer.start();
 }
 
 void ZmqServerApp::stopPublish()
 {
+    std::cout << "Stopping publishing" << std::endl;
     m_publishTimer.stop();
 }
 
 void ZmqServerApp::setInterval(const int msec)
 {
+    std::cout << "Setting publishing interval to " << msec << std::endl;
     m_publishTimer.setInterval(msec);
 }
 

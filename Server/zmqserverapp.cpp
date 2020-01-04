@@ -16,7 +16,7 @@ ZmqServerApp::ZmqServerApp(int argc, char *argv[]):
 {
     setupPublisher();
     setupResponder();
-    setupSubscriber();
+    //setupSubscriber();
 }
 
 ZmqServerApp::~ZmqServerApp()
@@ -28,16 +28,49 @@ ZmqServerApp::~ZmqServerApp()
 
 void ZmqServerApp::repData()
 {
+    m_repNotifier.setEnabled(false);
+    while(events(m_repSocket) & ZMQ_POLLIN)
+    {
 
+    std::cout << "Receiving command: "<< std::endl;
+    zmq::message_t message;
+    m_repSocket.recv(message);
+    std::string command((char*)message.data(),message.size());
+    std::cout << "Received command: " << command << std::endl;
+    if(command=="Start")
+    {
+        startPublish();
+    }
+    else if(command=="Stop")
+    {
+        stopPublish();
+    }
+    else if(command=="Interval")
+    {
+        m_repSocket.recv(message);
+        int interval = *static_cast<int*>(message.data());
+        setInterval(interval);
+    }
+    else if(command=="Lights")
+    {
+        toggleLights();
+    }
+    m_repSocket.send("OK",2);
+
+    }
+    m_repNotifier.setEnabled(true);
 }
 
 void ZmqServerApp::subData()
 {
-
+    m_subNotifier.setEnabled(false);
+    std::cout << "Sub data coming " << std::endl;
+    m_subNotifier.setEnabled(true);
 }
 
 void ZmqServerApp::pubData()
 {
+    //std::cout << "Sending data" << std::endl;
     std::ostringstream part1, part2, part3;
     part1 << "Server status: ";
     part2 << "Config: \t" << m_responseWord.toStdString();
@@ -46,6 +79,7 @@ void ZmqServerApp::pubData()
     m_pubSocket.send(part1.str().c_str(),part1.str().length(),static_cast<int>(zmq::send_flags::sndmore));
     m_pubSocket.send(part2.str().c_str(),part2.str().length(),static_cast<int>(zmq::send_flags::sndmore));
     m_pubSocket.send(part3.str().c_str(),part3.str().length(),static_cast<int>(zmq::send_flags::none));
+    //std::cout << "Sent data" << std::endl;
 }
 
 void ZmqServerApp::setupPublisher()
@@ -60,7 +94,7 @@ void ZmqServerApp::setupPublisher()
         &ZmqServerApp::pubData
     );
     m_publishTimer.start();
-    std::cout << "Publisher started on port 5000, interval of 1000 ms" << std::endl;
+    std::cout << "Publisher ready on port 5000, interval of 1000 ms" << std::endl;
 }
 
 void ZmqServerApp::setupResponder()
@@ -89,4 +123,11 @@ void ZmqServerApp::setupSubscriber()
     std::cout << "Subscriber started on port 7000" << std::endl;
 }
 
+int ZmqServerApp::events(zmq::socket_t &socket)
+{
+    int events = 0;
+    std::size_t eventsSize = sizeof(events);
+    zmq_getsockopt(socket,ZMQ_EVENTS, &events, &eventsSize);
+    return events;
+}
 
